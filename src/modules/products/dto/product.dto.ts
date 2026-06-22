@@ -67,6 +67,15 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => SpecItemDto)
   specifications?: SpecItemDto[];
+
+  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() retailEnabled?: boolean;
+  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() wholesaleEnabled?: boolean;
+
+  @ApiPropertyOptional({ minimum: 1, default: 12 })
+  @IsOptional() @IsInt() @Min(1) bundleSize?: number;
+
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() allowMixedColors?: boolean;
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() allowMixedSizes?: boolean;
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}

@@ -79,6 +79,21 @@ export class Product {
   specifications: { label: string; value: string }[];
 
   @Prop({ default: true })
+  retailEnabled: boolean;
+
+  @Prop({ default: true })
+  wholesaleEnabled: boolean;
+
+  @Prop({ default: 12, min: 1 })
+  bundleSize: number;
+
+  @Prop({ default: false })
+  allowMixedColors: boolean;
+
+  @Prop({ default: false })
+  allowMixedSizes: boolean;
+
+  @Prop({ default: true })
   active: boolean;
 }
 
