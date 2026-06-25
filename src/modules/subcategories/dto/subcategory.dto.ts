@@ -16,6 +16,11 @@ export class CreateSubcategoryDto {
   @IsString()
   category: string;
 
+  @ApiPropertyOptional({ description: 'Public image URL' })
+  @IsOptional()
+  @IsString()
+  image?: string;
+
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
   @IsInt()
