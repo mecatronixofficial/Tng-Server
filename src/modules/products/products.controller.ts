@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ProductsService } from './products.service';
 import {
+  BulkProductImportDto,
   CreateProductDto,
   ProductQueryDto,
   UpdateProductDto,
@@ -70,6 +71,13 @@ export class ProductsAdminController {
   @Post()
   create(@Body() dto: CreateProductDto) {
     return this.service.create(dto);
+  }
+
+  @Post('bulk')
+  bulkImport(@Body() dto: BulkProductImportDto) {
+    return this.service.bulkImport(dto.products, {
+      updateExisting: dto.updateExisting,
+    });
   }
 
   @Patch(':id')

@@ -80,6 +80,19 @@ export class CreateProductDto {
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}
 
+export class BulkProductImportDto {
+  @ApiProperty({ type: [CreateProductDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductDto)
+  products: CreateProductDto[];
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  updateExisting?: boolean;
+}
+
 export class ProductQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by category slug' })
   @IsOptional() @IsString() category?: string;

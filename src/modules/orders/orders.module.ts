@@ -17,6 +17,7 @@ import {
   Patch,
   Post,
   Query,
+  Logger,
   UseGuards,
 } from '@nestjs/common';
 import { InjectModel, MongooseModule } from '@nestjs/mongoose';
@@ -47,6 +48,8 @@ import {
   buildSort,
 } from '../../common/dto/pagination.dto';
 import { escapeRegex } from '../../common/utils/slug';
+import { AuthModule } from '../auth/auth.module';
+import { MailService } from '../auth/mail.service';
 
 class CreateOrderDto {
   @ApiProperty() @IsString() @MinLength(2) customerName!: string;
@@ -77,9 +80,35 @@ class OrderQueryDto extends PaginationQueryDto {
 
 @Injectable()
 class OrdersService {
-  constructor(@InjectModel(Order.name) private readonly model: Model<OrderDocument>) {}
+  private readonly logger = new Logger(OrdersService.name);
 
-  create(dto: CreateOrderDto) { return this.model.create(dto); }
+  constructor(
+    @InjectModel(Order.name) private readonly model: Model<OrderDocument>,
+    private readonly mail: MailService,
+  ) {}
+
+  async create(dto: CreateOrderDto) {
+    const order = await this.model.create(dto);
+
+    this.mail.sendOrderEnquiry({
+      customerName: order.customerName,
+      phone: order.phone,
+      email: order.email,
+      productName: order.productName,
+      productSlug: order.productSlug,
+      color: order.color,
+      size: order.size,
+      quantity: order.quantity,
+      message: order.message,
+      source: order.source,
+    }).catch((error) => {
+      this.logger.error(
+        `Order ${order.id} saved, but enquiry email failed: ${error?.message || error}`,
+      );
+    });
+
+    return order;
+  }
 
   async list(q: OrderQueryDto) {
     const f: FilterQuery<OrderDocument> = {};
@@ -147,7 +176,10 @@ class OrdersAdminController {
 }
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }])],
+  imports: [
+    AuthModule,
+    MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
+  ],
   controllers: [OrdersPublicController, OrdersAdminController],
   providers: [OrdersService],
   exports: [OrdersService, MongooseModule],

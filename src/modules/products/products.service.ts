@@ -109,6 +109,64 @@ export class ProductsService {
     return created;
   }
 
+  async bulkImport(
+    products: CreateProductDto[],
+    options: { updateExisting?: boolean } = {},
+  ) {
+    const result = {
+      total: products.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as { row: number; name?: string; message: string }[],
+    };
+    const affectedCategories = new Set<string>();
+    const affectedSubcategories = new Set<string>();
+
+    for (const [index, dto] of products.entries()) {
+      const row = index + 1;
+      try {
+        const slug = (dto.slug && makeSlug(dto.slug)) || makeSlug(dto.name);
+        const payload = { ...dto, slug };
+        const existing = await this.model.findOne({ slug });
+
+        if (existing) {
+          if (!options.updateExisting) {
+            result.skipped += 1;
+            continue;
+          }
+
+          const beforeCategory = existing.category;
+          const beforeSubcategory = existing.subcategory;
+          await this.model.updateOne({ _id: existing._id }, payload);
+          result.updated += 1;
+
+          affectedCategories.add(beforeCategory);
+          if (beforeSubcategory) affectedSubcategories.add(beforeSubcategory);
+        } else {
+          await this.model.create(payload);
+          result.created += 1;
+        }
+
+        affectedCategories.add(payload.category);
+        if (payload.subcategory) affectedSubcategories.add(payload.subcategory);
+      } catch (error) {
+        result.errors.push({
+          row,
+          name: dto?.name,
+          message: (error as Error).message,
+        });
+      }
+    }
+
+    await Promise.all([
+      ...Array.from(affectedCategories).map((slug) => this.refreshCategoryCount(slug)),
+      ...Array.from(affectedSubcategories).map((slug) => this.refreshSubcategoryCount(slug)),
+    ]);
+
+    return result;
+  }
+
   async update(id: string, dto: UpdateProductDto) {
     const patch: any = { ...dto };
     if (dto.name && !dto.slug) patch.slug = makeSlug(dto.name);
