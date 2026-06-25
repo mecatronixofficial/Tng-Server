@@ -14,6 +14,9 @@ export class Subcategory {
   @Prop({ required: true, index: true, trim: true, lowercase: true })
   category: string;
 
+  @Prop()
+  image?: string;
+
   @Prop({ default: 0, min: 0 })
   productCount: number;
 

@@ -23,9 +23,13 @@ export class CategoriesService {
   }
 
   async findBySlug(slug: string) {
-    const c = await this.model.findOne({ slug, active: true });
+    const c = await this.model.findOne({ slug: makeSlug(slug), active: true });
     if (!c) throw new NotFoundException('Category not found');
     return c;
+  }
+
+  async existsBySlug(slug: string) {
+    return this.model.exists({ slug: makeSlug(slug) });
   }
 
   async findById(id: string) {
@@ -41,7 +45,6 @@ export class CategoriesService {
 
   async update(id: string, dto: UpdateCategoryDto) {
     const patch: any = { ...dto };
-    if (dto.name && !dto.slug) patch.slug = makeSlug(dto.name);
     if (dto.slug) patch.slug = makeSlug(dto.slug);
 
     const c = await this.model.findByIdAndUpdate(id, patch, { new: true });
@@ -57,6 +60,7 @@ export class CategoriesService {
 
   /** Called by products service to keep counts accurate */
   async refreshProductCount(slug: string, count: number) {
-    await this.model.updateOne({ slug }, { productCount: count });
+    if (!slug) return;
+    await this.model.updateOne({ slug: makeSlug(slug) }, { productCount: count });
   }
 }

@@ -25,9 +25,16 @@ export class SubcategoriesService {
   }
 
   async findBySlug(slug: string) {
-    const subcategory = await this.model.findOne({ slug, active: true });
+    const subcategory = await this.model.findOne({ slug: makeSlug(slug), active: true });
     if (!subcategory) throw new NotFoundException('Subcategory not found');
     return subcategory;
+  }
+
+  async existsInCategory(slug: string, category: string) {
+    return this.model.exists({
+      slug: makeSlug(slug),
+      category: makeSlug(category),
+    });
   }
 
   async findById(id: string) {
@@ -43,7 +50,6 @@ export class SubcategoriesService {
 
   async update(id: string, dto: UpdateSubcategoryDto) {
     const patch: any = { ...dto };
-    if (dto.name && !dto.slug) patch.slug = makeSlug(dto.name);
     if (dto.slug) patch.slug = makeSlug(dto.slug);
     if (dto.category) patch.category = makeSlug(dto.category);
 
@@ -60,6 +66,6 @@ export class SubcategoriesService {
 
   async refreshProductCount(slug: string, count: number) {
     if (!slug) return;
-    await this.model.updateOne({ slug }, { productCount: count });
+    await this.model.updateOne({ slug: makeSlug(slug) }, { productCount: count });
   }
 }

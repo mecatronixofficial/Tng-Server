@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 
@@ -21,11 +21,51 @@ export class ProductsService {
     private readonly subcategoriesService: SubcategoriesService,
   ) {}
 
+  private normalizeProductPayload<T extends Partial<CreateProductDto | UpdateProductDto>>(dto: T) {
+    const payload: any = { ...dto };
+    if (payload.category) payload.category = makeSlug(payload.category);
+    if (payload.subcategory) payload.subcategory = makeSlug(payload.subcategory);
+    else if ('subcategory' in payload) payload.subcategory = undefined;
+    if (payload.slug) payload.slug = makeSlug(payload.slug);
+    return payload;
+  }
+
+  private async validateCategoryAndSubcategory(payload: Partial<CreateProductDto | UpdateProductDto>) {
+    if (!payload.category) return;
+
+    const category = makeSlug(payload.category);
+    const categoryExists = await this.categoriesService.existsBySlug(category);
+    if (!categoryExists) {
+      throw new BadRequestException(`Category "${payload.category}" does not exist`);
+    }
+
+    if (payload.subcategory) {
+      const subcategory = makeSlug(payload.subcategory);
+      const subcategoryExists = await this.subcategoriesService.existsInCategory(
+        subcategory,
+        category,
+      );
+      if (!subcategoryExists) {
+        throw new BadRequestException(
+          `Subcategory "${payload.subcategory}" does not exist in category "${payload.category}"`,
+        );
+      }
+    }
+  }
+
+  private buildUpdateOperation(payload: Record<string, unknown>) {
+    if ('subcategory' in payload && payload.subcategory === undefined) {
+      const { subcategory: _subcategory, ...set } = payload;
+      return { $set: set, $unset: { subcategory: '' } };
+    }
+    return payload;
+  }
+
   private buildQuery(q: ProductQueryDto, publicOnly = false): FilterQuery<ProductDocument> {
     const filter: FilterQuery<ProductDocument> = {};
     if (publicOnly) filter.active = true;
-    if (q.category) filter.category = q.category;
-    if (q.subcategory) filter.subcategory = q.subcategory;
+    if (q.category) filter.category = makeSlug(q.category);
+    if (q.subcategory) filter.subcategory = makeSlug(q.subcategory);
     if (q.featured === 'true' || q.featured === '1') filter.featured = true;
     if (q.newArrival === 'true' || q.newArrival === '1') filter.newArrival = true;
 
@@ -82,7 +122,7 @@ export class ProductsService {
   }
 
   async findBySlug(slug: string) {
-    const p = await this.model.findOne({ slug, active: true });
+    const p = await this.model.findOne({ slug: makeSlug(slug), active: true });
     if (!p) throw new NotFoundException('Product not found');
     return p;
   }
@@ -94,16 +134,19 @@ export class ProductsService {
   }
 
   async related(slug: string, limit = 4) {
-    const current = await this.model.findOne({ slug }).lean();
+    const productSlug = makeSlug(slug);
+    const current = await this.model.findOne({ slug: productSlug }).lean();
     if (!current) return [];
     return this.model
-      .find({ slug: { $ne: slug }, category: current.category, active: true })
+      .find({ slug: { $ne: productSlug }, category: current.category, active: true })
       .limit(limit);
   }
 
   async create(dto: CreateProductDto) {
-    const slug = (dto.slug && makeSlug(dto.slug)) || makeSlug(dto.name);
-    const created = await this.model.create({ ...dto, slug });
+    const payload = this.normalizeProductPayload(dto);
+    await this.validateCategoryAndSubcategory(payload);
+    const slug = payload.slug || makeSlug(dto.name);
+    const created = await this.model.create({ ...payload, slug });
     await this.refreshCategoryCount(created.category);
     if (created.subcategory) await this.refreshSubcategoryCount(created.subcategory);
     return created;
@@ -126,8 +169,10 @@ export class ProductsService {
     for (const [index, dto] of products.entries()) {
       const row = index + 1;
       try {
-        const slug = (dto.slug && makeSlug(dto.slug)) || makeSlug(dto.name);
-        const payload = { ...dto, slug };
+        const payload = this.normalizeProductPayload(dto);
+        await this.validateCategoryAndSubcategory(payload);
+        const slug = payload.slug || makeSlug(dto.name);
+        payload.slug = slug;
         const existing = await this.model.findOne({ slug });
 
         if (existing) {
@@ -138,7 +183,7 @@ export class ProductsService {
 
           const beforeCategory = existing.category;
           const beforeSubcategory = existing.subcategory;
-          await this.model.updateOne({ _id: existing._id }, payload);
+          await this.model.updateOne({ _id: existing._id }, this.buildUpdateOperation(payload));
           result.updated += 1;
 
           affectedCategories.add(beforeCategory);
@@ -168,24 +213,39 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto) {
-    const patch: any = { ...dto };
-    if (dto.name && !dto.slug) patch.slug = makeSlug(dto.name);
-    if (dto.slug) patch.slug = makeSlug(dto.slug);
+    const patch: any = this.normalizeProductPayload(dto);
 
     const before = await this.model.findById(id).lean();
     if (!before) throw new NotFoundException('Product not found');
 
-    const updated = await this.model.findByIdAndUpdate(id, patch, { new: true });
+    if (patch.category && patch.category !== before.category && !('subcategory' in patch)) {
+      patch.subcategory = undefined;
+    }
+
+    await this.validateCategoryAndSubcategory({
+      ...patch,
+      category: patch.category ?? before.category,
+    });
+
+    const updated = await this.model.findByIdAndUpdate(
+      id,
+      this.buildUpdateOperation(patch),
+      { new: true },
+    );
     if (!updated) throw new NotFoundException('Product not found');
 
-    // Refresh counts if category changed
-    if (dto.category && dto.category !== before.category) {
+    const categoryChanged = Boolean(patch.category && patch.category !== before.category);
+    const subcategoryChanged =
+      'subcategory' in patch && patch.subcategory !== before.subcategory;
+    const activeChanged = 'active' in patch && patch.active !== before.active;
+
+    if (categoryChanged || activeChanged) {
       await this.refreshCategoryCount(before.category);
-      await this.refreshCategoryCount(dto.category);
+      await this.refreshCategoryCount(updated.category);
     }
-    if ('subcategory' in dto && dto.subcategory !== before.subcategory) {
+    if (subcategoryChanged || activeChanged) {
       if (before.subcategory) await this.refreshSubcategoryCount(before.subcategory);
-      if (dto.subcategory) await this.refreshSubcategoryCount(dto.subcategory);
+      if (updated.subcategory) await this.refreshSubcategoryCount(updated.subcategory);
     }
     return updated;
   }
@@ -199,12 +259,14 @@ export class ProductsService {
   }
 
   private async refreshCategoryCount(slug: string) {
-    const count = await this.model.countDocuments({ category: slug, active: true });
+    const category = makeSlug(slug);
+    const count = await this.model.countDocuments({ category, active: true });
     await this.categoriesService.refreshProductCount(slug, count);
   }
 
   private async refreshSubcategoryCount(slug: string) {
-    const count = await this.model.countDocuments({ subcategory: slug, active: true });
+    const subcategory = makeSlug(slug);
+    const count = await this.model.countDocuments({ subcategory, active: true });
     await this.subcategoriesService.refreshProductCount(slug, count);
   }
 }
