@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Param,
@@ -58,6 +59,7 @@ export class UploadsController {
     },
   })
   async uploadMany(@UploadedFiles() files: Express.Multer.File[]) {
+    if (!files?.length) throw new BadRequestException('No files provided');
     return Promise.all(files.map((f) => this.service.uploadImage(f)));
   }
 
