@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { uploadImageMaxMb } from '../../modules/uploads/upload-limits';
 
 interface ErrorResponseShape {
   statusCode: number;
@@ -40,7 +41,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error = obj.error;
       }
     } else if (exception && typeof exception === 'object' && 'message' in exception) {
-      message = (exception as Error).message;
+      const err = exception as Error & {
+        code?: string;
+        status?: number;
+        statusCode?: number;
+      };
+
+      message = err.message;
+
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+        message = `Image is too large. Maximum allowed size is ${uploadImageMaxMb}MB.`;
+        error = 'Payload Too Large';
+      } else if (err.status === 413 || err.statusCode === 413) {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+        message = err.message || 'Request payload is too large';
+        error = 'Payload Too Large';
+      }
+
       // Mongo duplicate key
       if ((exception as any).code === 11000) {
         status = HttpStatus.CONFLICT;
