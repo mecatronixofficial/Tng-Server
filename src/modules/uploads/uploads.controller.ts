@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
+import { uploadImageMaxMb, uploadLimits } from './upload-limits';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -33,9 +34,11 @@ export class UploadsController {
   constructor(private readonly service: UploadsService) {}
 
   @Post('image')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', { limits: uploadLimits }))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload a single image to Cloudinary' })
+  @ApiOperation({
+    summary: `Upload a single image to Cloudinary (max ${uploadImageMaxMb}MB)`,
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -47,9 +50,11 @@ export class UploadsController {
   }
 
   @Post('images')
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(FilesInterceptor('files', 10, { limits: uploadLimits }))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload up to 10 images at once' })
+  @ApiOperation({
+    summary: `Upload up to 10 images at once (max ${uploadImageMaxMb}MB each)`,
+  })
   @ApiBody({
     schema: {
       type: 'object',
