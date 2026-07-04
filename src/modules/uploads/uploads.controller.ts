@@ -23,7 +23,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
-import { uploadImageMaxMb, uploadLimits } from './upload-limits';
+import {
+  uploadImageMaxFiles,
+  uploadImageMaxMb,
+  uploadLimits,
+} from './upload-limits';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -50,10 +54,10 @@ export class UploadsController {
   }
 
   @Post('images')
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: uploadLimits }))
+  @UseInterceptors(FilesInterceptor('files', uploadImageMaxFiles, { limits: uploadLimits }))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: `Upload up to 10 images at once (max ${uploadImageMaxMb}MB each)`,
+    summary: `Upload up to ${uploadImageMaxFiles} images at once (max ${uploadImageMaxMb}MB each)`,
   })
   @ApiBody({
     schema: {
@@ -65,7 +69,7 @@ export class UploadsController {
   })
   async uploadMany(@UploadedFiles() files: Express.Multer.File[]) {
     if (!files?.length) throw new BadRequestException('No files provided');
-    return Promise.all(files.map((f) => this.service.uploadImage(f)));
+    return this.service.uploadImages(files);
   }
 
   @Delete(':publicId(*)')
