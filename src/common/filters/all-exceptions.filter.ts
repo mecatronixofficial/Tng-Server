@@ -7,7 +7,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { uploadImageMaxMb } from '../../modules/uploads/upload-limits';
+import {
+  uploadImageMaxFiles,
+  uploadImageMaxMb,
+} from '../../modules/uploads/upload-limits';
 
 interface ErrorResponseShape {
   statusCode: number;
@@ -53,6 +56,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         status = HttpStatus.PAYLOAD_TOO_LARGE;
         message = `Image is too large. Maximum allowed size is ${uploadImageMaxMb}MB.`;
         error = 'Payload Too Large';
+      } else if (err.code === 'LIMIT_FILE_COUNT') {
+        status = HttpStatus.BAD_REQUEST;
+        message = `Too many images selected. Upload ${uploadImageMaxFiles} images or fewer at once.`;
+        error = 'Bad Request';
+      } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Unexpected upload field. Use "file" for one image or "files" for multiple images.';
+        error = 'Bad Request';
       } else if (err.status === 413 || err.statusCode === 413) {
         status = HttpStatus.PAYLOAD_TOO_LARGE;
         message = err.message || 'Request payload is too large';
