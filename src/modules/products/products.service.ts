@@ -27,6 +27,12 @@ export class ProductsService {
     if (payload.subcategory) payload.subcategory = makeSlug(payload.subcategory);
     else if ('subcategory' in payload) payload.subcategory = undefined;
     if (payload.slug) payload.slug = makeSlug(payload.slug);
+    if (!('offerPrice' in payload) || payload.offerPrice === null || payload.offerPrice === '') {
+      payload.offerPrice = payload.originalPrice ?? 0;
+    }
+    if (!('originalPrice' in payload) || payload.originalPrice === null || payload.originalPrice === '') {
+      payload.originalPrice = payload.offerPrice ?? 0;
+    }
     return payload;
   }
 

@@ -40,8 +40,8 @@ export class CreateProductDto {
   @IsArray() @IsString({ each: true }) sizes: string[];
 
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) stock: number;
-  @ApiProperty({ minimum: 0 }) @IsNumber() @Min(0) offerPrice: number;
-  @ApiProperty({ minimum: 0 }) @IsNumber() @Min(0) originalPrice: number;
+  @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsOptional() @IsNumber() @Min(0) offerPrice?: number;
+  @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsOptional() @IsNumber() @Min(0) originalPrice?: number;
   @ApiProperty() @IsString() material: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() gsm?: string;
