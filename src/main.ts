@@ -5,6 +5,8 @@ import helmet from "helmet";
 
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import * as dns from 'dns';
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
