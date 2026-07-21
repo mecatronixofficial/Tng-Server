@@ -18,6 +18,7 @@ import { StatsModule } from './modules/stats/stats.module';
 import { FaqsModule } from './modules/faqs/faqs.module';
 import { UsersService } from './modules/users/users.service';
 import { SubcategoriesModule } from './modules/subcategories/subcategories.module';
+import { VisitorsModule } from './modules/visitors/visitors.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SubcategoriesModule } from './modules/subcategories/subcategories.modul
     StatsModule,
     FaqsModule,
     SubcategoriesModule,
+    VisitorsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

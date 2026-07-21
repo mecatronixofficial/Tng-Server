@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -15,7 +16,11 @@ export class CreateBlogDto {
   @ApiPropertyOptional() @IsOptional() @IsString() slug?: string;
   @ApiProperty() @IsString() excerpt: string;
   @ApiProperty() @IsString() content: string;
-  @ApiProperty() @IsString() coverImage: string;
+  @ApiProperty({ type: [String], maxItems: 5 })
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  images: string[];
   @ApiProperty() @IsString() author: string;
   @ApiPropertyOptional() @IsOptional() @IsString() authorImage?: string;
   @ApiProperty() @IsString() category: string;

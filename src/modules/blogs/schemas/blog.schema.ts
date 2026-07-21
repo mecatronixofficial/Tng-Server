@@ -10,7 +10,7 @@ export class Blog {
   slug: string;
   @Prop({ required: true }) excerpt: string;
   @Prop({ required: true }) content: string;
-  @Prop({ required: true }) coverImage: string;
+  @Prop({ type: [String], default: [] }) images: string[];
   @Prop({ required: true }) author: string;
   @Prop() authorImage?: string;
   @Prop({ required: true, index: true }) category: string;
