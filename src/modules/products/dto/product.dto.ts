@@ -36,6 +36,9 @@ export class CreateProductDto {
   @ApiProperty({ type: [String] })
   @IsArray() @IsString({ each: true }) colors: string[];
 
+  @ApiPropertyOptional({ minimum: 0, description: 'Total colors available, shown instead of the color list when set' })
+  @IsOptional() @IsInt() @Min(0) colorsCount?: number;
+
   @ApiProperty({ type: [String] })
   @IsArray() @IsString({ each: true }) sizes: string[];
 

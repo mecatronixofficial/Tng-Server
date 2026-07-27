@@ -36,6 +36,9 @@ export class Product {
   @Prop({ type: [String], default: [] })
   colors: string[];
 
+  @Prop({ min: 0 })
+  colorsCount?: number;
+
   @Prop({ type: [String], default: [] })
   sizes: string[];
 

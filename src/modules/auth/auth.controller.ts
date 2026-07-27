@@ -29,6 +29,7 @@ class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() currentPassword?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(6) newPassword?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() avatar?: string;
 }
 
 @ApiTags('auth')
@@ -71,7 +72,7 @@ export class AuthController {
       if (!ok) throw new BadRequestException('Current password is incorrect');
       await this.users.updatePassword(user.sub, dto.newPassword);
     }
-    return this.users.updateProfile(user.sub, { name: dto.name, email: dto.email });
+    return this.users.updateProfile(user.sub, { name: dto.name, email: dto.email, avatar: dto.avatar });
   }
 
   @Post('forgot-password')
