@@ -47,13 +47,14 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatar: user.avatar,
       },
     };
   }
 
   async me(userId: string) {
     const u = await this.users.findById(userId);
-    return { id: u.id, email: u.email, name: u.name, role: u.role };
+    return { id: u.id, email: u.email, name: u.name, role: u.role, avatar: u.avatar };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {

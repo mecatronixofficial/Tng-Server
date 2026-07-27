@@ -15,6 +15,9 @@ export class User {
   @Prop({ required: true })
   name: string;
 
+  @Prop()
+  avatar?: string;
+
   @Prop({ enum: Role, default: Role.USER, index: true })
   role: Role;
 

@@ -70,14 +70,15 @@ export class UsersService {
 
   async updateProfile(
     id: string,
-    data: { name?: string; email?: string },
+    data: { name?: string; email?: string; avatar?: string },
   ) {
-    const update: Partial<{ name: string; email: string }> = {};
+    const update: Partial<{ name: string; email: string; avatar: string }> = {};
     if (data.name) update.name = data.name.trim();
     if (data.email) update.email = data.email.toLowerCase().trim();
+    if (data.avatar !== undefined) update.avatar = data.avatar;
     const user = await this.userModel.findByIdAndUpdate(id, update, { new: true });
     if (!user) throw new NotFoundException('User not found');
-    return { id: user.id, email: user.email, name: user.name, role: user.role };
+    return { id: user.id, email: user.email, name: user.name, role: user.role, avatar: user.avatar };
   }
 
   /**
